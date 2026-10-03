@@ -1,0 +1,12 @@
+[package]
+name = "migguard"
+version = "0.1.0"
+edition = "2024"
+description = "Linter que detecta migrations SQL perigosas antes de chegarem em produção"
+license = "MIT"
+repository = "https://github.com/menezes0067/migguard"
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive"] }
+walkdir = "2.5.0"
