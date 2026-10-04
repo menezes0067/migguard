@@ -1,0 +1,30 @@
+name: PR Branch Policy
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+
+permissions: {}
+
+jobs:
+  validate-pr-flow:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate source and target branches
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if [ "$BASE_REF" = "dev" ]; then
+            echo "Allowed: any branch can open PR to dev."
+            exit 0
+          fi
+
+          if [ "$BASE_REF" = "main" ] && [ "$HEAD_REF" = "dev" ]; then
+            echo "Allowed: only dev can open PR to main."
+            exit 0
+          fi
+
+          echo "Blocked: PR flow must be <any-branch -> dev> or <dev -> main>."
+          echo "Current flow: $HEAD_REF -> $BASE_REF"
+          exit 1
