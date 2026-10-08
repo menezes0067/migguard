@@ -30,7 +30,7 @@ impl fmt::Display for Finding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}: {} [{}] {}\n   dica: {}\n",
+            "{}: {} [{}] {}\n  dica: {}\n",
             self.line, self.severity, self.rule, self.message, self.help
         )
     }
@@ -45,4 +45,8 @@ pub fn normalize(sql: &str) -> String {
         .split_whitespace()
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+pub fn has_flag(line: &str, flag: &str) -> bool {
+    line.split_whitespace().any(|part| part == flag)
 }
