@@ -28,7 +28,7 @@ fn main() -> Result<ExitCode> {
     let cli = Cli::parse();
 
     let content = std::fs::read_to_string(&cli.path)
-        .with_context(|| format!("não foi possível ler {}", cli.path.display()))?;
+        .with_context(|| format!("failed not read {}", cli.path.display()))?;
 
     let findings = lint(&content, &rules::all());
 
