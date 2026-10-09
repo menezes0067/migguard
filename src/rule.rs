@@ -30,13 +30,13 @@ impl fmt::Display for Finding {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}: {} [{}] {}\n  dica: {}\n",
+            "{}: {} [{}] {}\n  suggestion: {}\n",
             self.line, self.severity, self.rule, self.message, self.help
         )
     }
 }
 
-pub trait Rule{
+pub trait Rule {
     fn check(&self, stmt: &Statement) -> Vec<Finding>;
 }
 
@@ -47,6 +47,15 @@ pub fn normalize(sql: &str) -> String {
         .join(" ")
 }
 
-pub fn has_flag(line: &str, flag: &str) -> bool {
-    line.split_whitespace().any(|part| part == flag)
+pub fn has_flag(statement: &str, flag: &str) -> bool {
+    let tokens: Vec<&str> = statement.split_whitespace().collect();
+    let words: Vec<&str> = flag.split_whitespace().collect();
+
+    if words.is_empty() {
+        return false;
+    }
+
+    tokens
+        .windows(words.len())
+        .any(|window| window == words.as_slice())
 }

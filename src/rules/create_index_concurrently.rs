@@ -7,13 +7,12 @@ impl Rule for CreateIndexConcurrently {
     fn check(&self, stmt: &Statement) -> Vec<Finding> {
         let sql = normalize(&stmt.sql);
 
-        let search_flag = has_flag(&sql, "CONCURRENTLY");
+        let has_concurrently = has_flag(&sql, "CONCURRENTLY");
 
-        let is_create_index = 
-            sql.starts_with("CREATE INDEX") || 
-            sql.starts_with("CREATE UNIQUE INDEX");
+        let is_create_index =
+            sql.starts_with("CREATE INDEX") || sql.starts_with("CREATE UNIQUE INDEX");
 
-        if is_create_index && !search_flag {
+        if is_create_index && !has_concurrently {
             return vec![Finding {
                 rule: "create_index_concurrently",
                 severity: Severity::Error,
@@ -22,7 +21,7 @@ impl Rule for CreateIndexConcurrently {
                 CREATE INDEX without CONCURRENTLY blocks writes to the table while the index is being created."),
                 help: String::from("use CREATE INDEX CONCURRENTLY"),
             }];
-        } 
+        }
 
         Vec::new()
     }

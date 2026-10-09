@@ -40,7 +40,7 @@ fn main() -> Result<ExitCode> {
         .iter()
         .filter(|f| f.severity == Severity::Error)
         .count();
-    println!("{} problema(s), {} erro(s)", findings.len(), errors);
+    println!("{} warning(s), {} error(s)", findings.len(), errors);
 
     Ok(if errors > 0 {
         ExitCode::FAILURE
