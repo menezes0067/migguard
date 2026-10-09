@@ -1,69 +1,77 @@
 # migguard
 
-Linter que detecta migrations SQL perigosas antes de chegarem em produção.
+A linter that catches dangerous SQL migrations before they reach production.
 
-> **Status:** em desenvolvimento. Nada disso funciona ainda, o README descreve o que está planejado.
+> **Status:** early development. The project is a work in progress and the rule set is still small.
 
-## Por que existe
+## Why it exists
 
-Algumas migrations parecem inofensivas, mas travam a tabela em produção. Um `CREATE INDEX` sem `CONCURRENTLY` bloqueia escritas enquanto o índice é criado, e um `DROP COLUMN` pode quebrar a versão antiga da aplicação que ainda está rodando durante o deploy. Isso costuma passar batido no code review.
+Some migrations look harmless but can take production down. A `CREATE INDEX` without `CONCURRENTLY` blocks writes on the table while the index is built. An `ADD COLUMN ... NOT NULL` without a default fails on any table that already has rows. A `DROP COLUMN` can break the previous version of the application that is still running during a deploy.
 
-O `migguard` lê suas migrations, aponta o que é perigoso, explica o motivo e sugere a alternativa segura. Ele foi pensado pra rodar localmente e no CI, falhando o pipeline antes que o problema chegue em produção.
+These problems usually slip through because they work fine in development and staging, where tables are small and nothing is under load. They tend to be caught only in code review, when they are caught at all.
 
-## Uso (planejado)
+`migguard` reads your migration files, flags the risky statements, explains why each one is dangerous, and suggests a safer alternative. It is meant to run locally and in CI, failing the pipeline before the problem reaches production.
 
-```bash
-migguard ./migrations
-```
+## Usage
 
-Saída esperada:
-
-```
-migrations/002_add_index.sql:4: erro [create-index-concurrently]
-    CREATE INDEX sem CONCURRENTLY bloqueia escritas na tabela enquanto o índice é criado
-    dica: use CREATE INDEX CONCURRENTLY
-
-1 arquivo(s) analisado(s): 1 erro(s), 0 aviso(s)
-```
-
-O comando sai com código diferente de zero quando encontra erros, então funciona direto em pipelines de CI.
-
-## Regras
-
-| Regra | O que detecta | Status |
-|-------|---------------|--------|
-| `create-index-concurrently` | `CREATE INDEX` sem `CONCURRENTLY` | planejada |
-| `add-column-not-null` | `ADD COLUMN ... NOT NULL` sem `DEFAULT` | planejada |
-| `drop-column` | `DROP COLUMN` | planejada |
-| `drop-table` | `DROP TABLE` | planejada |
-| `rename` | `RENAME COLUMN` / `RENAME TABLE` | planejada |
-| `alter-column-type` | `ALTER COLUMN ... TYPE` | planejada |
-
-## Roadmap
-
-- [ ] CLI que lê arquivos `.sql` de um arquivo ou diretório
-- [ ] Primeira regra: `create-index-concurrently`
-- [ ] Demais regras da tabela acima
-- [ ] Testes com migrations boas e ruins para cada regra
-- [ ] CI com `cargo fmt`, `cargo clippy` e `cargo test`
-- [ ] Parser real (`sqlparser`) no lugar da análise por texto
-- [ ] Saída em JSON (`--format json`) e colorida
-- [ ] Arquivo de configuração para desligar regras
-- [ ] Exemplo de GitHub Action no README
-
-## Limitações conhecidas
-
-- Foco em PostgreSQL por enquanto.
-
-## Desenvolvimento
+Point `migguard` at a `.sql` file:
 
 ```bash
-cargo build
-cargo test
-cargo clippy --all-targets -- -D warnings
-cargo fmt
+migguard migrations/002_add_index.sql
 ```
 
-## Licença
+Given this migration:
 
-MIT
+```sql
+CREATE TABLE orders (id bigint PRIMARY KEY, user_id bigint);
+
+CREATE INDEX idx_orders_user_id ON orders (user_id);
+```
+
+`migguard` reports:
+
+```
+migrations/002_add_index.sql:3: error [create-index-concurrently] CREATE INDEX without CONCURRENTLY blocks writes on the table while the index is built
+    help: use CREATE INDEX CONCURRENTLY
+
+2 statement(s) analyzed: 1 error(s)
+```
+
+The safe version passes cleanly:
+
+```sql
+CREATE INDEX CONCURRENTLY idx_orders_user_id ON orders (user_id);
+```
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0`  | No errors found (warnings do not fail the run) |
+| `1`  | At least one error was found, or the file could not be read |
+
+This makes it easy to use in CI: a dangerous migration fails the pipeline.
+
+### Running from source
+
+```bash
+cargo run -- path/to/migration.sql
+```
+
+Or install it so the `migguard` command is available everywhere:
+
+```bash
+cargo install --path .
+```
+
+## Design goals
+
+- **Educational messages.** A finding should tell you what is wrong, why it matters, and what to do instead.
+- **Few false positives.** A linter that cries wolf gets ignored, so uncertain cases are warnings rather than errors.
+- **Easy to extend.** Each rule is a small, self-contained module, so adding a new one should take a single file.
+- **Honest about its limits.** Known limitations are documented rather than hidden.
+
+## Scope
+
+Focused on PostgreSQL for now. Lock behavior differs between databases and between versions, so a rule that matters in one engine may be harmless in another.
+
