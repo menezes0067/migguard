@@ -1,8 +1,8 @@
 use std::fmt;
 
-use crate::parser::Statement;
+use crate::parser::ParsedStatement;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
     Warn,
     Error,
@@ -36,26 +36,7 @@ impl fmt::Display for Finding {
     }
 }
 
-pub trait Rule {
-    fn check(&self, stmt: &Statement) -> Vec<Finding>;
+pub trait Rule{
+    fn check(&self, stmt: &ParsedStatement) -> Vec<Finding>;
 }
 
-pub fn normalize(sql: &str) -> String {
-    sql.to_uppercase()
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
-pub fn has_flag(statement: &str, flag: &str) -> bool {
-    let tokens: Vec<&str> = statement.split_whitespace().collect();
-    let words: Vec<&str> = flag.split_whitespace().collect();
-
-    if words.is_empty() {
-        return false;
-    }
-
-    tokens
-        .windows(words.len())
-        .any(|window| window == words.as_slice())
-}
