@@ -19,6 +19,6 @@ fn bad_migration_fails_and_reports_rule() {
     let stdout = String::from_utf8_lossy(&out.stdout);
 
     assert!(!out.status.success());
-    assert!(stdout.contains("create_index_concurrently"));
+    assert!(stdout.contains("create-index-concurrently"));
     assert!(stdout.contains("bad.sql"));
 }

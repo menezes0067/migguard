@@ -1,28 +1,28 @@
-use crate::parser::Statement;
-use crate::rule::{Finding, Rule, Severity, has_flag, normalize};
+use sqlparser::ast::Statement;
+
+use crate::parser::{ParsedStatement};
+use crate::rule::{Finding, Rule, Severity};
 
 pub struct CreateIndexConcurrently;
 
 impl Rule for CreateIndexConcurrently {
-    fn check(&self, stmt: &Statement) -> Vec<Finding> {
-        let sql = normalize(&stmt.sql);
+    fn check(&self, stmt: &ParsedStatement) -> Vec<Finding> {
+        let Statement::CreateIndex(index) = &stmt.ast else {
+            return Vec::new();
+        };
 
-        let has_concurrently = has_flag(&sql, "CONCURRENTLY");
-
-        let is_create_index =
-            sql.starts_with("CREATE INDEX") || sql.starts_with("CREATE UNIQUE INDEX");
-
-        if is_create_index && !has_concurrently {
-            return vec![Finding {
-                rule: "create_index_concurrently",
-                severity: Severity::Error,
-                line: stmt.line,
-                message: String::from("
-                CREATE INDEX without CONCURRENTLY blocks writes to the table while the index is being created."),
-                help: String::from("use CREATE INDEX CONCURRENTLY"),
-            }];
+        if index.concurrently {
+            return Vec::new();
         }
 
-        Vec::new()
+        vec![Finding {
+            rule: "create-index-concurrently",
+            severity: Severity::Error,
+            line: stmt.line,
+            message: String::from(
+                "CREATE INDEX without CONCURRENTLY blocks writes on the table while the index is built",
+            ),
+            help: String::from("use CREATE INDEX CONCURRENTLY"),
+        }]
     }
 }
